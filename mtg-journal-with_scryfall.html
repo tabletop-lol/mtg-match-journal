@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper MTG Post-Game Journal</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+    <div class="max-w-5xl mx-auto px-4 py-8">
+        
+        <!-- Browser Storage Warning Banner -->
+        <div class="bg-amber-950/30 border border-amber-900/50 p-3 rounded-xl mb-6 flex items-start gap-3 text-xs text-amber-200/90">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm mt-0.5"></i>
+            <div>
+                <span class="font-bold text-amber-400">Local Storage Mode:</span> Your data is saved locally in this browser. Clearing your browser data or cache will erase your records. Please use the <strong class="text-white">Export Backup</strong> button regularly to save a backup file, which you can restore anytime using <strong class="text-white">Import Backup</strong>.
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-800 pb-6 gap-4">
+            <div>
+                <h1 class="text-3xl font-black tracking-tight text-amber-500 flex items-center gap-3">
+                    <i class="fa-solid fa-scroll"></i> Paper MTG Journal
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">Track match outcomes, analyze pod dynamics, and refine your gameplay.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm cursor-pointer" title="Download backup JSON">
+                    <i class="fa-solid fa-download"></i> Export Backup
+                </button>
+                <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm cursor-pointer" title="Restore backup JSON">
+                    <i class="fa-solid fa-upload"></i> Import Backup
+                    <input type="file" id="import-file" accept=".json" onchange="importBackup(event)" class="hidden">
+                </label>
+                <button onclick="openModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer text-sm">
+                    <i class="fa-solid fa-plus"></i> Log New Game
+                </button>
+            </div>
+        </header>
+
+        <!-- Stats Overview Banner -->
+        <div id="stats-banner" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <div class="text-slate-400 text-xs font-semibold uppercase">Total Games</div>
+                <div id="stat-total" class="text-2xl font-bold text-slate-100 mt-1">0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <div class="text-slate-400 text-xs font-semibold uppercase">Win Rate</div>
+                <div id="stat-winrate" class="text-2xl font-bold text-emerald-400 mt-1">0%</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <div class="text-slate-400 text-xs font-semibold uppercase">Wins / Losses</div>
+                <div id="stat-record" class="text-2xl font-bold text-slate-100 mt-1">0 - 0</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                <div class="text-slate-400 text-xs font-semibold uppercase">Top Format</div>
+                <div id="stat-format" class="text-xl font-bold text-amber-400 mt-1 truncate">None</div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+                <span class="text-sm text-slate-400"><i class="fa-solid fa-filter mr-1"></i> Filter:</span>
+                <select id="filter-format" onchange="filterGames()" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-amber-500">
+                    <option value="ALL">All Formats</option>
+                </select>
+            </div>
+            <div class="text-sm text-slate-400" id="game-count-label">Showing 0 games</div>
+        </div>
+
+        <!-- Game Log Feed -->
+        <div id="games-container" class="space-y-4">
+            <!-- Dynamically populated entries -->
+        </div>
+
+    </div>
+
+    <!-- Modal for Logging / Editing Game -->
+    <div id="game-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50 overflow-y-auto">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 my-8 shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <h2 id="modal-title" class="text-xl font-bold text-amber-500 flex items-center gap-2">
+                    <i class="fa-solid fa-pen-to-square"></i> Log Match Result
+                </h2>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-lg cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <form id="game-form" onsubmit="submitGame(event)" class="space-y-5 overflow-y-auto pr-1 flex-1">
+                <input type="hidden" id="edit-game-id">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Date</label>
+                        <input type="date" id="game-date" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Format</label>
+                        <div class="flex gap-2">
+                            <select id="game-format" required class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-amber-500">
+                                <!-- Populated from storage -->
+                            </select>
+                            <button type="button" onclick="promptCustomFormat()" class="bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl text-sm text-amber-400 cursor-pointer" title="Add Custom Format"><i class="fa-solid fa-plus"></i></button>
+                            <button type="button" onclick="openManageFormatsModal()" class="bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl text-sm text-slate-300 cursor-pointer" title="Manage Custom Formats"><i class="fa-solid fa-gear"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Result</label>
+                        <select id="game-result" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-amber-500">
+                            <option value="Win">Win</option>
+                            <option value="Loss">Loss</option>
+                            <option value="Draw">Draw</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Pod Placement / Details</label>
+                        <input type="text" id="game-placement" placeholder="e.g., 1st of 4, Survived combo" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-amber-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Deck URL</label>
+                    <input type="url" id="game-moxfield" placeholder="https://www.moxfield.com/decks/..., https://archidekt.com/decks/..., ManaBox, etc." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-amber-500">
+                </div>
+
+                <!-- Opponents Section -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="block text-xs font-semibold text-amber-400 uppercase"><i class="fa-solid fa-users mr-1"></i> Opponents & Pod Details</label>
+                        <button type="button" onclick="addOpponentField()" class="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer"><i class="fa-solid fa-user-plus mr-1"></i> Add Opponent</button>
+                    </div>
+                    <div id="opponents-list" class="space-y-3">
+                        <!-- Dynamic opponent rows injected here -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1"><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> What I Can Try Better Next Time</label>
+                    <textarea id="game-notes" rows="3" placeholder="Example: Misplayed interaction on turn 4, need more spot removal, kept greedy hand..." class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm text-slate-200 outline-none focus:border-amber-500"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-800 shrink-0">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold text-slate-300 cursor-pointer">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-sm font-semibold text-white cursor-pointer shadow-lg">Save Game</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Manage Custom Formats Modal -->
+    <div id="manage-formats-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-amber-500 flex items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> Manage Custom Formats
+                </h3>
+                <button onclick="closeManageFormatsModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Delete custom formats you no longer use. Default built-in formats cannot be deleted.</p>
+            <div id="custom-formats-list" class="space-y-2 max-h-60 overflow-y-auto mb-4 pr-1">
+                <!-- Custom formats list -->
+            </div>
+            <div class="flex justify-end">
+                <button type="button" onclick="closeManageFormatsModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold text-slate-300 cursor-pointer">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theater Mode Modal with Commander Header & Nav Arrows -->
+    <div id="theater-modal" onclick="handleTheaterContainerClick(event)" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4 z-50 select-none">
+        <button onclick="closeTheater()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl z-50 cursor-pointer p-2">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="relative max-w-full max-h-full flex flex-col items-center justify-center gap-3">
+            <!-- Opponent & Commander Header -->
+            <div id="theater-header" class="bg-slate-900/90 border border-slate-700/80 px-4 py-2 rounded-xl text-center shadow-lg backdrop-blur-sm flex items-center gap-2">
+                <i class="fa-solid fa-user text-amber-500 text-sm"></i>
+                <span id="theater-opponent-name" class="font-bold text-slate-100 text-sm"></span>
+                <span id="theater-commander-name" class="text-amber-400 text-xs font-medium"></span>
+            </div>
+
+            <div class="relative flex items-center justify-center">
+                <!-- Left Nav Arrow -->
+                <button id="theater-prev-btn" onclick="prevTheaterImage(event)" class="absolute -left-12 sm:-left-16 bg-slate-900/80 hover:bg-amber-600 text-slate-200 hover:text-white p-3 rounded-full border border-slate-700 shadow-xl transition cursor-pointer flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 z-20">
+                    <i class="fa-solid fa-chevron-left text-base sm:text-lg"></i>
+                </button>
+
+                <!-- Enlarged Commander Image -->
+                <img id="theater-img" src="" alt="Commander Card Preview" class="max-h-[75vh] max-w-[85vw] sm:max-w-[80vw] rounded-2xl shadow-2xl border border-slate-700 object-contain">
+
+                <!-- Right Nav Arrow -->
+                <button id="theater-next-btn" onclick="nextTheaterImage(event)" class="absolute -right-12 sm:-right-16 bg-slate-900/80 hover:bg-amber-600 text-slate-200 hover:text-white p-3 rounded-full border border-slate-700 shadow-xl transition cursor-pointer flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 z-20">
+                    <i class="fa-solid fa-chevron-right text-base sm:text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY_GAMES = 'mtg_journal_games_v1';
+        const STORAGE_KEY_FORMATS = 'mtg_journal_formats_v1';
+        const scryfallCache = {};
+
+        // Theater mode state
+        let currentTheaterList = [];
+        let currentTheaterIndex = 0;
+
+        const defaultFormats = [
+            'Commander (EDH)',
+            'Standard',
+            'Modern',
+            'Pioneer',
+            'Legacy',
+            'Vintage',
+            'Pauper',
+            'Brawl',
+            'Booster Draft',
+            'Sealed Deck',
+            'Cube',
+            'Historic',
+            'Alchemy',
+            'Explorer',
+            'Timeless',
+            'Oathbreaker',
+            'Premodern',
+            'Two-Headed Giant (2HG)',
+            'Pauper EDH'
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('game-date').valueAsDate = new Date();
+            initFormats();
+            loadGames();
+            setupGlobalListeners();
+        });
+
+        function setupGlobalListeners() {
+            // Fix autocomplete click dismiss bug by listening to mousedown event delegation
+            document.addEventListener('mousedown', (e) => {
+                const item = e.target.closest('.autocomplete-item');
+                if (item) {
+                    const cardName = item.getAttribute('data-card-name');
+                    const imgUrl = item.getAttribute('data-card-img');
+                    selectCommanderSuggestion(item, cardName, imgUrl);
+                    e.preventDefault();
+                    return;
+                }
+
+                if (!e.target.closest('.relative')) {
+                    document.querySelectorAll('.autocomplete-dropdown').forEach(d => d.classList.add('hidden'));
+                }
+            });
+
+            // Keyboard navigation for theater mode
+            document.addEventListener('keydown', (e) => {
+                const modal = document.getElementById('theater-modal');
+                if (modal.classList.contains('hidden')) return;
+
+                if (e.key === 'Escape') closeTheater();
+                if (e.key === 'ArrowLeft') prevTheaterImage();
+                if (e.key === 'ArrowRight') nextTheaterImage();
+            });
+        }
+
+        function getFormats() {
+            const stored = localStorage.getItem(STORAGE_KEY_FORMATS);
+            if (!stored) {
+                localStorage.setItem(STORAGE_KEY_FORMATS, JSON.stringify(defaultFormats));
+                return defaultFormats;
+            }
+            try { return JSON.parse(stored); } catch (e) { return defaultFormats; }
+        }
+
+        function initFormats(selectToSet = null) {
+            const formats = getFormats().sort();
+            const select = document.getElementById('game-format');
+            const filterSelect = document.getElementById('filter-format');
+            const currentFilter = filterSelect.value;
+            
+            select.innerHTML = '';
+            filterSelect.innerHTML = '<option value="ALL">All Formats</option>';
+
+            formats.forEach(fmt => {
+                select.add(new Option(fmt, fmt));
+                filterSelect.add(new Option(fmt, fmt));
+            });
+
+            if (currentFilter && [...filterSelect.options].some(o => o.value === currentFilter)) {
+                filterSelect.value = currentFilter;
+            }
+            if (selectToSet) select.value = selectToSet;
+        }
+
+        function promptCustomFormat() {
+            const custom = prompt("Enter new format name:");
+            if (custom && custom.trim()) {
+                const name = custom.trim();
+                let formats = getFormats();
+                if (!formats.includes(name)) {
+                    formats.push(name);
+                    localStorage.setItem(STORAGE_KEY_FORMATS, JSON.stringify(formats));
+                }
+                initFormats(name);
+            }
+        }
+
+        function openManageFormatsModal() {
+            renderCustomFormatsList();
+            document.getElementById('manage-formats-modal').classList.remove('hidden');
+            document.getElementById('manage-formats-modal').classList.add('flex');
+        }
+
+        function closeManageFormatsModal() {
+            document.getElementById('manage-formats-modal').classList.remove('flex');
+            document.getElementById('manage-formats-modal').classList.add('hidden');
+        }
+
+        function renderCustomFormatsList() {
+            const formats = getFormats();
+            const customFormats = formats.filter(f => !defaultFormats.includes(f)).sort();
+            const container = document.getElementById('custom-formats-list');
+
+            if (customFormats.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-500 italic text-center py-4">No custom formats added yet.</div>`;
+                return;
+            }
+
+            container.innerHTML = customFormats.map(fmt => `
+                <div class="flex justify-between items-center bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 text-xs">
+                    <span class="font-medium text-slate-200 truncate mr-2">${escapeHtml(fmt)}</span>
+                    <button type="button" onclick="deleteCustomFormat('${escapeHtml(fmt).replace(/'/g, "\\'")}')" class="text-slate-500 hover:text-rose-400 transition cursor-pointer px-2 py-1" title="Delete format">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function deleteCustomFormat(formatName) {
+            if (confirm(`Are you sure you want to delete the custom format "${formatName}"?`)) {
+                let formats = getFormats();
+                formats = formats.filter(f => f !== formatName);
+                localStorage.setItem(STORAGE_KEY_FORMATS, JSON.stringify(formats));
+                initFormats();
+                renderCustomFormatsList();
+            }
+        }
+
+        function getGames() {
+            const stored = localStorage.getItem(STORAGE_KEY_GAMES);
+            if (!stored) return [];
+            try { return JSON.parse(stored); } catch (e) { return []; }
+        }
+
+        function saveGames(games) {
+            localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(games));
+        }
+
+        async function loadGames() {
+            const games = getGames();
+            renderGames(games);
+            updateStats(games);
+            await fetchCommanderArtForGames(games);
+        }
+
+        async function fetchCommanderArtForGames(games) {
+            let updated = false;
+            for (let game of games) {
+                if (game.opponents) {
+                    for (let opp of game.opponents) {
+                        if (opp.commander && !opp.cardImageUrl && !scryfallCache[opp.commander]) {
+                            const imgUrl = await fetchScryfallCardImage(opp.commander);
+                            if (imgUrl) {
+                                scryfallCache[opp.commander] = imgUrl;
+                                opp.cardImageUrl = imgUrl;
+                                updated = true;
+                            }
+                        } else if (opp.commander && scryfallCache[opp.commander]) {
+                            opp.cardImageUrl = scryfallCache[opp.commander];
+                        }
+                    }
+                }
+            }
+            if (updated) {
+                saveGames(games);
+                renderGames(games);
+            }
+        }
+
+        async function fetchScryfallCardImage(commanderName) {
+            try {
+                const res = await fetch(`https://api.scryfall.com/cards/named?fuzzy=${encodeURIComponent(commanderName)}`);
+                if (!res.ok) return null;
+                const data = await res.json();
+                if (data.image_uris && data.image_uris.normal) {
+                    return data.image_uris.normal;
+                } else if (data.card_faces && data.card_faces[0].image_uris) {
+                    return data.card_faces[0].image_uris.normal;
+                }
+            } catch (err) {
+                console.error('Scryfall API lookup failed for:', commanderName);
+            }
+            return null;
+        }
+
+        function renderGames(games) {
+            const container = document.getElementById('games-container');
+            document.getElementById('game-count-label').innerText = `Showing ${games.length} games`;
+            
+            if (games.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-16 bg-slate-900/40 border border-slate-800 rounded-2xl">
+                        <i class="fa-solid fa-fire-flame-curved text-4xl text-amber-500/80 mb-3"></i>
+                        <p class="text-slate-400">No games logged yet. Click "Log New Game" to get started!</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = games.map(game => {
+                const badgeColor = game.result === 'Win' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                                   game.result === 'Loss' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+                
+                // 2x2 layout container for Commander pods
+                const opponentsHtml = game.opponents && game.opponents.length > 0 ? `
+                    <div class="mt-4 border-t border-slate-800/80 pt-3">
+                        <div class="text-xs font-semibold text-slate-400 uppercase mb-2"><i class="fa-solid fa-users mr-1"></i> Opponents & Pod</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            ${game.opponents.map((opp, idx) => {
+                                const imgTag = opp.cardImageUrl ? `
+                                    <div class="mt-2 group relative overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 shadow-md cursor-pointer aspect-[5/7] max-w-[130px]" onclick="openTheaterForGame(${game.id}, ${idx})">
+                                        <img src="${escapeHtml(opp.cardImageUrl)}" alt="${escapeHtml(opp.commander)}" class="w-full h-full object-cover transition duration-300 group-hover:scale-105">
+                                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
+                                            <i class="fa-solid fa-magnifying-glass-plus"></i> Expand
+                                        </div>
+                                    </div>
+                                ` : (opp.commander ? `<div class="text-xs text-slate-500 italic mt-1">Loading card art...</div>` : '');
+
+                                return `
+                                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 text-xs flex flex-col justify-between">
+                                        <div>
+                                            <div class="font-bold text-slate-200 mb-0.5"><i class="fa-solid fa-user text-amber-500 mr-1"></i> ${escapeHtml(opp.name)}</div>
+                                            ${opp.commander ? `<div class="text-amber-300/90 font-medium mb-1"><i class="fa-solid fa-shield-halved mr-1"></i> ${escapeHtml(opp.commander)}</div>` : ''}
+                                            ${opp.playstyle ? `<div class="text-slate-400 italic mb-1">${escapeHtml(opp.playstyle)}</div>` : ''}
+                                        </div>
+                                        ${imgTag}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : '';
+
+                const deckLink = game.moxfield_url ? `
+                    <a href="${escapeHtml(game.moxfield_url)}" target="_blank" class="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 px-3 py-1.5 rounded-lg transition">
+                        <i class="fa-solid fa-link"></i> View Deck
+                    </a>
+                ` : '';
+
+                const notesHtml = game.improvement_notes ? `
+                    <div class="mt-3 bg-amber-950/20 border border-amber-900/30 p-3 rounded-lg text-xs text-amber-200/90">
+                        <span class="font-bold text-amber-400 block mb-1"><i class="fa-solid fa-lightbulb mr-1"></i> Next Time Improvement:</span>
+                        ${escapeHtml(game.improvement_notes)}
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-md relative hover:border-slate-700 transition">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                            <div class="flex items-center gap-3">
+                                <span class="px-3 py-1 rounded-full text-xs font-bold border ${badgeColor}">${game.result}</span>
+                                <span class="text-xs font-semibold bg-slate-800 text-slate-300 px-2.5 py-1 rounded-md">${escapeHtml(game.format)}</span>
+                                ${game.placement ? `<span class="text-xs text-slate-400">(${escapeHtml(game.placement)})</span>` : ''}
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs text-slate-500"><i class="fa-regular fa-calendar mr-1"></i> ${game.date}</span>
+                                <button onclick="editGame(${game.id})" class="text-slate-500 hover:text-amber-400 transition cursor-pointer" title="Edit entry"><i class="fa-solid fa-pen text-sm"></i></button>
+                                <button onclick="deleteGame(${game.id})" class="text-slate-500 hover:text-rose-400 transition cursor-pointer" title="Delete entry"><i class="fa-solid fa-trash-can text-sm"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 items-center mb-1">
+                            ${deckLink}
+                        </div>
+
+                        ${opponentsHtml}
+                        ${notesHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats(games) {
+            const total = games.length;
+            const wins = games.filter(g => g.result === 'Win').length;
+            const losses = games.filter(g => g.result === 'Loss').length;
+            const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-winrate').innerText = winrate + '%';
+            document.getElementById('stat-record').innerText = `${wins} - ${losses}`;
+
+            if (total > 0) {
+                const formatCounts = {};
+                games.forEach(g => formatCounts[g.format] = (formatCounts[g.format] || 0) + 1);
+                const topFormat = Object.keys(formatCounts).reduce((a, b) => formatCounts[a] > formatCounts[b] ? a : b);
+                document.getElementById('stat-format').innerText = topFormat;
+            } else {
+                document.getElementById('stat-format').innerText = 'None';
+            }
+        }
+
+        function filterGames() {
+            const selectedFormat = document.getElementById('filter-format').value;
+            const games = getGames();
+            if (selectedFormat === 'ALL') {
+                renderGames(games);
+            } else {
+                renderGames(games.filter(g => g.format === selectedFormat));
+            }
+        }
+
+        function openModal() {
+            document.getElementById('edit-game-id').value = '';
+            document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Log Match Result';
+            document.getElementById('game-form').reset();
+            document.getElementById('opponents-list').innerHTML = '';
+            document.getElementById('game-date').valueAsDate = new Date();
+            addOpponentField();
+            
+            document.getElementById('game-modal').classList.remove('hidden');
+            document.getElementById('game-modal').classList.add('flex');
+        }
+
+        function editGame(id) {
+            const games = getGames();
+            const game = games.find(g => g.id === id);
+            if (!game) return;
+
+            document.getElementById('edit-game-id').value = game.id;
+            document.getElementById('modal-title').innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit Match Record';
+            document.getElementById('game-date').value = game.date || '';
+            document.getElementById('game-format').value = game.format || '';
+            document.getElementById('game-result').value = game.result || 'Win';
+            document.getElementById('game-placement').value = game.placement || '';
+            document.getElementById('game-moxfield').value = game.moxfield_url || '';
+            document.getElementById('game-notes').value = game.improvement_notes || '';
+
+            const list = document.getElementById('opponents-list');
+            list.innerHTML = '';
+            
+            if (game.opponents && game.opponents.length > 0) {
+                game.opponents.forEach(opp => {
+                    addOpponentField(opp);
+                });
+            } else {
+                addOpponentField();
+            }
+
+            document.getElementById('game-modal').classList.remove('hidden');
+            document.getElementById('game-modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('game-modal').classList.remove('flex');
+            document.getElementById('game-modal').classList.add('hidden');
+            document.getElementById('game-form').reset();
+            document.getElementById('opponents-list').innerHTML = '';
+        }
+
+        function openTheaterForGame(gameId, opponentIndex) {
+            const games = getGames();
+            const game = games.find(g => g.id === gameId);
+            if (!game || !game.opponents) return;
+
+            // Collect all opponents in this game that have card images
+            currentTheaterList = game.opponents.filter(o => o.cardImageUrl);
+            if (currentTheaterList.length === 0) return;
+
+            const targetOpp = game.opponents[opponentIndex];
+            currentTheaterIndex = currentTheaterList.findIndex(o => o === targetOpp);
+            if (currentTheaterIndex === -1) currentTheaterIndex = 0;
+
+            updateTheaterDisplay();
+
+            document.getElementById('theater-modal').classList.remove('hidden');
+            document.getElementById('theater-modal').classList.add('flex');
+        }
+
+        function updateTheaterDisplay() {
+            if (currentTheaterList.length === 0) return;
+
+            const current = currentTheaterList[currentTheaterIndex];
+            document.getElementById('theater-img').src = current.cardImageUrl;
+            document.getElementById('theater-opponent-name').innerText = current.name || 'Opponent';
+            document.getElementById('theater-commander-name').innerText = current.commander ? `(${current.commander})` : '';
+
+            // Toggle left/right buttons based on count
+            const prevBtn = document.getElementById('theater-prev-btn');
+            const nextBtn = document.getElementById('theater-next-btn');
+
+            if (currentTheaterList.length > 1) {
+                prevBtn.classList.remove('hidden');
+                nextBtn.classList.remove('hidden');
+            } else {
+                prevBtn.classList.add('hidden');
+                nextBtn.classList.add('hidden');
+            }
+        }
+
+        function prevTheaterImage(e) {
+            if (e) e.stopPropagation();
+            if (currentTheaterList.length <= 1) return;
+            currentTheaterIndex = (currentTheaterIndex - 1 + currentTheaterList.length) % currentTheaterList.length;
+            updateTheaterDisplay();
+        }
+
+        function nextTheaterImage(e) {
+            if (e) e.stopPropagation();
+            if (currentTheaterList.length <= 1) return;
+            currentTheaterIndex = (currentTheaterIndex + 1) % currentTheaterList.length;
+            updateTheaterDisplay();
+        }
+
+        function handleTheaterContainerClick(e) {
+            // Close if background overlay is clicked directly
+            if (e.target.id === 'theater-modal') {
+                closeTheater();
+            }
+        }
+
+        function closeTheater() {
+            document.getElementById('theater-modal').classList.remove('flex');
+            document.getElementById('theater-modal').classList.add('hidden');
+        }
+
+        function addOpponentField(data = {}) {
+            const list = document.getElementById('opponents-list');
+            const div = document.createElement('div');
+            div.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 relative opponent-row';
+            div.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-semibold text-slate-400">Opponent Details</span>
+                    <button type="button" onclick="this.closest('.opponent-row').remove()" class="text-slate-500 hover:text-rose-400 text-xs cursor-pointer"><i class="fa-solid fa-xmark"></i> Remove</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input type="text" placeholder="Opponent Name" value="${escapeHtml(data.name || '')}" class="opp-name bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500">
+                    <div class="relative">
+                        <input type="text" placeholder="Commander / Deck Archetype" value="${escapeHtml(data.commander || '')}" autocomplete="off" class="opp-commander w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500" oninput="handleCommanderInput(this)" onfocus="handleCommanderInput(this)">
+                        <input type="hidden" class="opp-card-img" value="${escapeHtml(data.cardImageUrl || '')}">
+                        <div class="autocomplete-dropdown hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto"></div>
+                    </div>
+                </div>
+                <input type="text" placeholder="Playstyle description (e.g., Aggressive token swarm, Stax control, Combo finisher)..." value="${escapeHtml(data.playstyle || '')}" class="opp-playstyle w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500">
+            `;
+            list.appendChild(div);
+        }
+
+        let searchTimeout = null;
+        function handleCommanderInput(inputEl) {
+            const query = inputEl.value.trim();
+            const dropdown = inputEl.parentElement.querySelector('.autocomplete-dropdown');
+            
+            clearTimeout(searchTimeout);
+            if (query.length < 2) {
+                dropdown.classList.add('hidden');
+                dropdown.innerHTML = '';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://api.scryfall.com/cards/search?q=${encodeURIComponent(query)}&unique=cards`);
+                    if (!res.ok) {
+                        dropdown.classList.add('hidden');
+                        return;
+                    }
+                    const data = await res.json();
+                    if (!data.data || data.data.length === 0) {
+                        dropdown.innerHTML = `<div class="p-2 text-xs text-slate-500 italic">No matching cards found</div>`;
+                        dropdown.classList.remove('hidden');
+                        return;
+                    }
+
+                    const cards = data.data.slice(0, 8); // limit to 8 suggestions
+                    dropdown.innerHTML = cards.map(card => {
+                        const imgUrl = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || '';
+                        const setName = card.set_name || card.set.toUpperCase();
+                        const setCode = card.set.toUpperCase();
+                        const collectorNum = card.collector_number;
+                        const setIconUrl = `https://svgs.scryfall.io/sets/${card.set}.svg`;
+
+                        return `
+                            <div class="autocomplete-item flex items-center gap-2.5 p-2 hover:bg-slate-800 cursor-pointer border-b border-slate-800/60 last:border-0 text-xs transition" data-card-name="${escapeHtml(card.name)}" data-card-img="${escapeHtml(imgUrl)}">
+                                <img src="${setIconUrl}" alt="${setCode}" class="w-4 h-4 object-contain shrink-0 filter invert opacity-80" onerror="this.style.display='none'">
+                                <div class="flex-1 min-w-0 pointer-events-none">
+                                    <div class="font-bold text-slate-200 truncate">${escapeHtml(card.name)}</div>
+                                    <div class="text-slate-400 text-[11px] truncate">${escapeHtml(setName)} (${setCode}) #${escapeHtml(collectorNum)}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    dropdown.classList.remove('hidden');
+                } catch (err) {
+                    console.error('Scryfall autocomplete error:', err);
+                }
+            }, 300);
+        }
+
+        function selectCommanderSuggestion(el, cardName, imgUrl) {
+            const container = el.closest('div.relative');
+            if (!container) return;
+            const input = container.querySelector('.opp-commander');
+            const hiddenImg = container.querySelector('.opp-card-img');
+            const dropdown = container.querySelector('.autocomplete-dropdown');
+
+            if (input) input.value = cardName;
+            if (hiddenImg) hiddenImg.value = imgUrl;
+            if (dropdown) {
+                dropdown.classList.add('hidden');
+                dropdown.innerHTML = '';
+            }
+        }
+
+        async function submitGame(event) {
+            event.preventDefault();
+
+            const editId = document.getElementById('edit-game-id').value;
+            const opponents = [];
+            
+            document.querySelectorAll('.opponent-row').forEach(row => {
+                const cmdName = row.querySelector('.opp-commander').value.trim();
+                let cardImg = row.querySelector('.opp-card-img').value.trim();
+
+                if (!cardImg && editId) {
+                    const oldGames = getGames();
+                    const oldGame = oldGames.find(g => g.id === Number(editId));
+                    if (oldGame && oldGame.opponents) {
+                        const matchedOpp = oldGame.opponents.find(o => o.commander === cmdName);
+                        if (matchedOpp) cardImg = matchedOpp.cardImageUrl || '';
+                    }
+                }
+
+                opponents.push({
+                    name: row.querySelector('.opp-name').value || 'Opponent',
+                    commander: cmdName,
+                    playstyle: row.querySelector('.opp-playstyle').value || '',
+                    cardImageUrl: cardImg
+                });
+            });
+
+            const gameData = {
+                id: editId ? Number(editId) : Date.now(),
+                date: document.getElementById('game-date').value,
+                format: document.getElementById('game-format').value,
+                result: document.getElementById('game-result').value,
+                placement: document.getElementById('game-placement').value,
+                moxfield_url: document.getElementById('game-moxfield').value,
+                improvement_notes: document.getElementById('game-notes').value,
+                opponents: opponents
+            };
+
+            let games = getGames();
+            if (editId) {
+                const index = games.findIndex(g => g.id === Number(editId));
+                if (index !== -1) games[index] = gameData;
+            } else {
+                games.unshift(gameData);
+            }
+
+            saveGames(games);
+            closeModal();
+            loadGames();
+        }
+
+        function deleteGame(id) {
+            if (confirm('Are you sure you want to delete this game record?')) {
+                const games = getGames().filter(g => g.id !== id);
+                saveGames(games);
+                loadGames();
+            }
+        }
+
+        function exportBackup() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+
+            const dateStr = `${year}-${month}-${day}`;
+            const timeStr = `${hours}${minutes}${seconds}`;
+            
+            const data = {
+                formats: getFormats(),
+                games: getGames(),
+                exportDate: now.toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `mtg-journal-backup-${dateStr}-${timeStr}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importBackup(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed.games && Array.isArray(parsed.games)) saveGames(parsed.games);
+                    if (parsed.formats && Array.isArray(parsed.formats)) localStorage.setItem(STORAGE_KEY_FORMATS, JSON.stringify(parsed.formats));
+                    initFormats();
+                    loadGames();
+                    alert('Backup imported successfully!');
+                } catch (err) {
+                    alert('Failed to parse backup file. Invalid JSON format.');
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
