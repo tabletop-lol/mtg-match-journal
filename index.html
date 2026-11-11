@@ -9,33 +9,36 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
     <div class="max-w-5xl mx-auto px-4 py-8">
-        
-        <!-- Browser Storage Warning Banner -->
-        <div class="bg-amber-950/30 border border-amber-900/50 p-3 rounded-xl mb-6 flex items-start gap-3 text-xs text-amber-200/90">
-            <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm mt-0.5"></i>
-            <div>
-                <span class="font-bold text-amber-400">Local Storage Mode:</span> Your data is saved locally in this browser. Clearing your browser data or cache will erase your records. Please use the <strong class="text-white">Export Backup</strong> button regularly to save a backup file, which you can restore anytime using <strong class="text-white">Import Backup</strong>.
-            </div>
-        </div>
 
         <!-- Header -->
-        <header class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-slate-800 pb-6 gap-4">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-slate-800 pb-6 gap-4">
             <div>
                 <h1 class="text-3xl font-black tracking-tight text-amber-500 flex items-center gap-3">
                     <i class="fa-solid fa-scroll"></i> Paper MTG Journal
                 </h1>
                 <p class="text-slate-400 text-sm mt-1">Track match outcomes, analyze pod dynamics, and refine your gameplay.</p>
+
+                <!-- Browser Storage Warning Banner (Relocated under header description) -->
+                <div class="bg-amber-950/30 border border-amber-900/50 p-2.5 rounded-xl mt-3 flex items-start gap-2.5 text-xs text-amber-200/90 max-w-2xl">
+                    <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm mt-0.5 shrink-0"></i>
+                    <div>
+                        <span class="font-bold text-amber-400">Local Storage Mode:</span> Your data is saved locally in this browser. Please use <strong class="text-white">Export Backup</strong> regularly to save a JSON backup file.
+                    </div>
+                </div>
             </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm cursor-pointer" title="Download backup JSON">
-                    <i class="fa-solid fa-download"></i> Export Backup
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <button onclick="openRemindersModal()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 font-semibold px-3.5 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm cursor-pointer" title="Cards to Remember">
+                    <i class="fa-solid fa-bookmark text-amber-500"></i> Cards to Remember
                 </button>
-                <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-4 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm cursor-pointer" title="Restore backup JSON">
-                    <i class="fa-solid fa-upload"></i> Import Backup
+                <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-3.5 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm cursor-pointer" title="Download backup JSON">
+                    <i class="fa-solid fa-download"></i> Export
+                </button>
+                <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold px-3.5 py-2.5 rounded-xl shadow transition flex items-center gap-2 text-sm cursor-pointer" title="Restore backup JSON">
+                    <i class="fa-solid fa-upload"></i> Import
                     <input type="file" id="import-file" accept=".json" onchange="importBackup(event)" class="hidden">
                 </label>
-                <button onclick="openModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-5 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer text-sm">
-                    <i class="fa-solid fa-plus"></i> Log New Game
+                <button onclick="openModal()" class="bg-amber-600 hover:bg-amber-500 text-white font-semibold px-4 py-2.5 rounded-xl shadow-lg transition flex items-center gap-2 cursor-pointer text-sm">
+                    <i class="fa-solid fa-plus"></i> Log Game
                 </button>
             </div>
         </header>
@@ -123,8 +126,20 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">Deck URL</label>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-1">My Deck URL</label>
                     <input type="url" id="game-moxfield" placeholder="https://www.moxfield.com/decks/..., https://archidekt.com/decks/..., ManaBox, etc." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 outline-none focus:border-amber-500">
+                </div>
+
+                <!-- Review for Synergy Section -->
+                <div>
+                    <label class="block text-xs font-semibold text-amber-400 uppercase mb-1"><i class="fa-solid fa-arrows-spin mr-1"></i> Review for Synergy (Unhappy Cards in My Deck)</label>
+                    <div class="relative">
+                        <input type="text" id="synergy-card-input" autocomplete="off" placeholder="Search Scryfall to add card to synergy review list..." class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 outline-none focus:border-amber-500" oninput="handleCardSearchInput(this, 'synergy')" onfocus="handleCardSearchInput(this, 'synergy')">
+                        <div class="autocomplete-dropdown hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto"></div>
+                    </div>
+                    <div id="synergy-cards-tags" class="flex flex-wrap gap-2 mt-2">
+                        <!-- Card chips injected dynamically -->
+                    </div>
                 </div>
 
                 <!-- Opponents Section -->
@@ -133,7 +148,7 @@
                         <label class="block text-xs font-semibold text-amber-400 uppercase"><i class="fa-solid fa-users mr-1"></i> Opponents & Pod Details</label>
                         <button type="button" onclick="addOpponentField()" class="text-xs text-amber-400 hover:text-amber-300 font-semibold cursor-pointer"><i class="fa-solid fa-user-plus mr-1"></i> Add Opponent</button>
                     </div>
-                    <div id="opponents-list" class="space-y-3">
+                    <div id="opponents-list" class="space-y-4">
                         <!-- Dynamic opponent rows injected here -->
                     </div>
                 </div>
@@ -148,6 +163,36 @@
                     <button type="submit" class="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-sm font-semibold text-white cursor-pointer shadow-lg">Save Game</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Cards to Remember Modal -->
+    <div id="reminders-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center mb-4 shrink-0">
+                <h3 class="text-lg font-bold text-amber-500 flex items-center gap-2">
+                    <i class="fa-solid fa-bookmark"></i> Cards to Remember
+                </h3>
+                <button onclick="closeRemindersModal()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form onsubmit="addCardReminder(event)" class="space-y-3 shrink-0 mb-4 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                <div class="relative">
+                    <input type="text" id="reminder-card-name" autocomplete="off" placeholder="Search card to remember..." required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500" oninput="handleCardSearchInput(this, 'reminder')" onfocus="handleCardSearchInput(this, 'reminder')">
+                    <input type="hidden" id="reminder-card-img">
+                    <div class="autocomplete-dropdown hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto"></div>
+                </div>
+                <input type="text" id="reminder-note" placeholder="Notes (e.g., Great Tech choice for Urza, consideration for sideboard)..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500">
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1">
+                        <i class="fa-solid fa-plus"></i> Add Reminder
+                    </button>
+                </div>
+            </form>
+
+            <div id="reminders-list" class="space-y-2 overflow-y-auto pr-1 flex-1">
+                <!-- List of card reminders -->
+            </div>
         </div>
     </div>
 
@@ -177,9 +222,10 @@
         </button>
 
         <div class="relative max-w-full max-h-full flex flex-col items-center justify-center gap-3">
-            <!-- Opponent & Commander Header -->
+            <!-- Header Badge -->
             <div id="theater-header" class="bg-slate-900/90 border border-slate-700/80 px-4 py-2 rounded-xl text-center shadow-lg backdrop-blur-sm flex items-center gap-2">
-                <i class="fa-solid fa-user text-amber-500 text-sm"></i>
+                <i id="theater-header-icon" class="fa-solid fa-user text-amber-500 text-sm"></i>
+                <span id="theater-category-label" class="text-xs uppercase font-bold text-amber-500 tracking-wider"></span>
                 <span id="theater-opponent-name" class="font-bold text-slate-100 text-sm"></span>
                 <span id="theater-commander-name" class="text-amber-400 text-xs font-medium"></span>
             </div>
@@ -190,8 +236,8 @@
                     <i class="fa-solid fa-chevron-left text-base sm:text-lg"></i>
                 </button>
 
-                <!-- Enlarged Commander Image -->
-                <img id="theater-img" src="" alt="Commander Card Preview" class="max-h-[75vh] max-w-[85vw] sm:max-w-[80vw] rounded-2xl shadow-2xl border border-slate-700 object-contain">
+                <!-- Enlarged Card Image -->
+                <img id="theater-img" src="" alt="Card Preview" class="max-h-[75vh] max-w-[85vw] sm:max-w-[80vw] rounded-2xl shadow-2xl border border-slate-700 object-contain">
 
                 <!-- Right Nav Arrow -->
                 <button id="theater-next-btn" onclick="nextTheaterImage(event)" class="absolute -right-12 sm:-right-16 bg-slate-900/80 hover:bg-amber-600 text-slate-200 hover:text-white p-3 rounded-full border border-slate-700 shadow-xl transition cursor-pointer flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 z-20">
@@ -204,7 +250,11 @@
     <script>
         const STORAGE_KEY_GAMES = 'mtg_journal_games_v1';
         const STORAGE_KEY_FORMATS = 'mtg_journal_formats_v1';
+        const STORAGE_KEY_REMINDERS = 'mtg_journal_reminders_v1';
         const scryfallCache = {};
+
+        // Active form state arrays
+        let tempSynergyCards = [];
 
         // Theater mode state
         let currentTheaterList = [];
@@ -240,13 +290,13 @@
         });
 
         function setupGlobalListeners() {
-            // Fix autocomplete click dismiss bug by listening to mousedown event delegation
             document.addEventListener('mousedown', (e) => {
                 const item = e.target.closest('.autocomplete-item');
                 if (item) {
                     const cardName = item.getAttribute('data-card-name');
                     const imgUrl = item.getAttribute('data-card-img');
-                    selectCommanderSuggestion(item, cardName, imgUrl);
+                    const targetType = item.getAttribute('data-target-type');
+                    selectCardSuggestion(item, cardName, imgUrl, targetType);
                     e.preventDefault();
                     return;
                 }
@@ -256,7 +306,6 @@
                 }
             });
 
-            // Keyboard navigation for theater mode
             document.addEventListener('keydown', (e) => {
                 const modal = document.getElementById('theater-modal');
                 if (modal.classList.contains('hidden')) return;
@@ -353,10 +402,16 @@
         function getGames() {
             const stored = localStorage.getItem(STORAGE_KEY_GAMES);
             if (!stored) return [];
-            try { return JSON.parse(stored); } catch (e) { return []; }
+            try { 
+                const raw = JSON.parse(stored); 
+                // Auto sort from newest to oldest by date
+                return raw.sort((a, b) => new Date(b.date) - new Date(a.date));
+            } catch (e) { return []; }
         }
 
         function saveGames(games) {
+            // Sort before saving
+            games.sort((a, b) => new Date(b.date) - new Date(a.date));
             localStorage.setItem(STORAGE_KEY_GAMES, JSON.stringify(games));
         }
 
@@ -424,14 +479,30 @@
                 const badgeColor = game.result === 'Win' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
                                    game.result === 'Loss' ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30';
                 
+                // Synergy Review Section
+                const synergyHtml = (game.synergy_cards && game.synergy_cards.length > 0) ? `
+                    <div class="mt-3 bg-slate-950/40 border border-slate-800 p-3 rounded-xl">
+                        <div class="text-[11px] font-bold text-amber-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrows-spin text-amber-500"></i> Review for Synergy (My Deck):
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            ${game.synergy_cards.map((c, idx) => `
+                                <button onclick="openTheaterForSynergy(${game.id}, ${idx})" class="bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 text-amber-200 text-xs px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer">
+                                    <i class="fa-solid fa-eye text-[10px] text-amber-400"></i> ${escapeHtml(c.name)}
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : '';
+
                 // 2x2 layout container for Commander pods
                 const opponentsHtml = game.opponents && game.opponents.length > 0 ? `
                     <div class="mt-4 border-t border-slate-800/80 pt-3">
                         <div class="text-xs font-semibold text-slate-400 uppercase mb-2"><i class="fa-solid fa-users mr-1"></i> Opponents & Pod</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            ${game.opponents.map((opp, idx) => {
+                            ${game.opponents.map((opp, oppIdx) => {
                                 const imgTag = opp.cardImageUrl ? `
-                                    <div class="mt-2 group relative overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 shadow-md cursor-pointer aspect-[5/7] max-w-[130px]" onclick="openTheaterForGame(${game.id}, ${idx})">
+                                    <div class="mt-2 group relative overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900 shadow-md cursor-pointer aspect-[5/7] max-w-[120px]" onclick="openTheaterForGame(${game.id}, ${oppIdx})">
                                         <img src="${escapeHtml(opp.cardImageUrl)}" alt="${escapeHtml(opp.commander)}" class="w-full h-full object-cover transition duration-300 group-hover:scale-105">
                                         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
                                             <i class="fa-solid fa-magnifying-glass-plus"></i> Expand
@@ -439,12 +510,35 @@
                                     </div>
                                 ` : (opp.commander ? `<div class="text-xs text-slate-500 italic mt-1">Loading card art...</div>` : '');
 
+                                const oppDeckBtn = opp.deckUrl ? `
+                                    <a href="${escapeHtml(opp.deckUrl)}" target="_blank" class="text-[11px] text-amber-400 hover:text-amber-300 underline font-medium block mt-1 truncate" title="${escapeHtml(opp.deckUrl)}">
+                                        <i class="fa-solid fa-link text-[10px] mr-1"></i> Opponent Deck
+                                    </a>
+                                ` : '';
+
+                                const oppConcerningCardsHtml = (opp.concerning_cards && opp.concerning_cards.length > 0) ? `
+                                    <div class="mt-2.5 pt-2 border-t border-slate-800/60">
+                                        <div class="text-[10px] font-bold text-rose-400 uppercase tracking-wide mb-1 flex items-center gap-1">
+                                            <i class="fa-solid fa-triangle-exclamation text-[10px]"></i> Cards that Concerned Me:
+                                        </div>
+                                        <div class="flex flex-wrap gap-1">
+                                            ${opp.concerning_cards.map((cc, ccIdx) => `
+                                                <button onclick="openTheaterForConcerningCard(${game.id}, ${oppIdx}, ${ccIdx})" class="bg-rose-950/40 hover:bg-rose-900/60 border border-rose-900/60 text-rose-200 text-[11px] px-2 py-0.5 rounded transition cursor-pointer">
+                                                    ${escapeHtml(cc.name)}
+                                                </button>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                ` : '';
+
                                 return `
                                     <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 text-xs flex flex-col justify-between">
                                         <div>
                                             <div class="font-bold text-slate-200 mb-0.5"><i class="fa-solid fa-user text-amber-500 mr-1"></i> ${escapeHtml(opp.name)}</div>
-                                            ${opp.commander ? `<div class="text-amber-300/90 font-medium mb-1"><i class="fa-solid fa-shield-halved mr-1"></i> ${escapeHtml(opp.commander)}</div>` : ''}
-                                            ${opp.playstyle ? `<div class="text-slate-400 italic mb-1">${escapeHtml(opp.playstyle)}</div>` : ''}
+                                            ${opp.commander ? `<div class="text-amber-300/90 font-medium mb-0.5"><i class="fa-solid fa-shield-halved mr-1"></i> ${escapeHtml(opp.commander)}</div>` : ''}
+                                            ${oppDeckBtn}
+                                            ${opp.playstyle ? `<div class="text-slate-400 italic mt-1">${escapeHtml(opp.playstyle)}</div>` : ''}
+                                            ${oppConcerningCardsHtml}
                                         </div>
                                         ${imgTag}
                                     </div>
@@ -456,7 +550,7 @@
 
                 const deckLink = game.moxfield_url ? `
                     <a href="${escapeHtml(game.moxfield_url)}" target="_blank" class="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-amber-400 px-3 py-1.5 rounded-lg transition">
-                        <i class="fa-solid fa-link"></i> View Deck
+                        <i class="fa-solid fa-link"></i> My Deck
                     </a>
                 ` : '';
 
@@ -486,6 +580,7 @@
                             ${deckLink}
                         </div>
 
+                        ${synergyHtml}
                         ${opponentsHtml}
                         ${notesHtml}
                     </div>
@@ -529,6 +624,10 @@
             document.getElementById('game-form').reset();
             document.getElementById('opponents-list').innerHTML = '';
             document.getElementById('game-date').valueAsDate = new Date();
+            
+            tempSynergyCards = [];
+            renderSynergyTags();
+
             addOpponentField();
             
             document.getElementById('game-modal').classList.remove('hidden');
@@ -548,6 +647,9 @@
             document.getElementById('game-placement').value = game.placement || '';
             document.getElementById('game-moxfield').value = game.moxfield_url || '';
             document.getElementById('game-notes').value = game.improvement_notes || '';
+
+            tempSynergyCards = game.synergy_cards ? [...game.synergy_cards] : [];
+            renderSynergyTags();
 
             const list = document.getElementById('opponents-list');
             list.innerHTML = '';
@@ -569,23 +671,86 @@
             document.getElementById('game-modal').classList.add('hidden');
             document.getElementById('game-form').reset();
             document.getElementById('opponents-list').innerHTML = '';
+            tempSynergyCards = [];
         }
 
+        // Synergy Tag Functions
+        function renderSynergyTags() {
+            const container = document.getElementById('synergy-cards-tags');
+            container.innerHTML = tempSynergyCards.map((c, i) => `
+                <span class="bg-amber-950/60 text-amber-200 border border-amber-800 text-xs px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                    ${escapeHtml(c.name)}
+                    <button type="button" onclick="removeSynergyTag(${i})" class="hover:text-rose-400 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                </span>
+            `).join('');
+        }
+
+        function removeSynergyTag(index) {
+            tempSynergyCards.splice(index, 1);
+            renderSynergyTags();
+        }
+
+        // Theater Mode Openers
         function openTheaterForGame(gameId, opponentIndex) {
             const games = getGames();
             const game = games.find(g => g.id === gameId);
             if (!game || !game.opponents) return;
 
-            // Collect all opponents in this game that have card images
-            currentTheaterList = game.opponents.filter(o => o.cardImageUrl);
+            currentTheaterList = game.opponents.filter(o => o.cardImageUrl).map(o => ({
+                name: o.name,
+                commander: o.commander ? `(${o.commander})` : '',
+                imageUrl: o.cardImageUrl,
+                category: 'Commander',
+                icon: 'fa-user'
+            }));
             if (currentTheaterList.length === 0) return;
 
             const targetOpp = game.opponents[opponentIndex];
-            currentTheaterIndex = currentTheaterList.findIndex(o => o === targetOpp);
+            currentTheaterIndex = currentTheaterList.findIndex(o => o.imageUrl === targetOpp.cardImageUrl);
             if (currentTheaterIndex === -1) currentTheaterIndex = 0;
 
             updateTheaterDisplay();
+            document.getElementById('theater-modal').classList.remove('hidden');
+            document.getElementById('theater-modal').classList.add('flex');
+        }
 
+        function openTheaterForSynergy(gameId, cardIndex) {
+            const games = getGames();
+            const game = games.find(g => g.id === gameId);
+            if (!game || !game.synergy_cards) return;
+
+            currentTheaterList = game.synergy_cards.map(c => ({
+                name: c.name,
+                commander: 'Review for Synergy (My Deck)',
+                imageUrl: c.imageUrl,
+                category: 'Synergy Review',
+                icon: 'fa-arrows-spin'
+            }));
+
+            currentTheaterIndex = cardIndex;
+            updateTheaterDisplay();
+            document.getElementById('theater-modal').classList.remove('hidden');
+            document.getElementById('theater-modal').classList.add('flex');
+        }
+
+        function openTheaterForConcerningCard(gameId, oppIndex, cardIndex) {
+            const games = getGames();
+            const game = games.find(g => g.id === gameId);
+            if (!game || !game.opponents || !game.opponents[oppIndex]) return;
+
+            const opp = game.opponents[oppIndex];
+            if (!opp.concerning_cards) return;
+
+            currentTheaterList = opp.concerning_cards.map(c => ({
+                name: c.name,
+                commander: `Opponent: ${opp.name}`,
+                imageUrl: c.imageUrl,
+                category: 'Cards that Concerned Me',
+                icon: 'fa-triangle-exclamation'
+            }));
+
+            currentTheaterIndex = cardIndex;
+            updateTheaterDisplay();
             document.getElementById('theater-modal').classList.remove('hidden');
             document.getElementById('theater-modal').classList.add('flex');
         }
@@ -594,11 +759,12 @@
             if (currentTheaterList.length === 0) return;
 
             const current = currentTheaterList[currentTheaterIndex];
-            document.getElementById('theater-img').src = current.cardImageUrl;
-            document.getElementById('theater-opponent-name').innerText = current.name || 'Opponent';
-            document.getElementById('theater-commander-name').innerText = current.commander ? `(${current.commander})` : '';
+            document.getElementById('theater-img').src = current.imageUrl;
+            document.getElementById('theater-opponent-name').innerText = current.name || '';
+            document.getElementById('theater-commander-name').innerText = current.commander || '';
+            document.getElementById('theater-category-label').innerText = current.category || '';
+            document.getElementById('theater-header-icon').className = `fa-solid ${current.icon || 'fa-user'} text-amber-500 text-sm`;
 
-            // Toggle left/right buttons based on count
             const prevBtn = document.getElementById('theater-prev-btn');
             const nextBtn = document.getElementById('theater-next-btn');
 
@@ -626,7 +792,6 @@
         }
 
         function handleTheaterContainerClick(e) {
-            // Close if background overlay is clicked directly
             if (e.target.id === 'theater-modal') {
                 closeTheater();
             }
@@ -637,10 +802,104 @@
             document.getElementById('theater-modal').classList.add('hidden');
         }
 
+        // Reminders Modal Logic
+        function openRemindersModal() {
+            renderRemindersList();
+            document.getElementById('reminders-modal').classList.remove('hidden');
+            document.getElementById('reminders-modal').classList.add('flex');
+        }
+
+        function closeRemindersModal() {
+            document.getElementById('reminders-modal').classList.remove('flex');
+            document.getElementById('reminders-modal').classList.add('hidden');
+        }
+
+        function getReminders() {
+            const stored = localStorage.getItem(STORAGE_KEY_REMINDERS);
+            if (!stored) return [];
+            try { return JSON.parse(stored); } catch(e) { return []; }
+        }
+
+        function renderRemindersList() {
+            const reminders = getReminders();
+            const container = document.getElementById('reminders-list');
+
+            if (reminders.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-500 italic text-center py-6">No cards added to reminders list.</div>`;
+                return;
+            }
+
+            container.innerHTML = reminders.map((r, i) => `
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-3">
+                        ${r.imageUrl ? `<img src="${escapeHtml(r.imageUrl)}" class="w-10 h-14 object-cover rounded shadow cursor-pointer" onclick="openSingleImageTheater('${escapeHtml(r.name)}', '${escapeHtml(r.imageUrl)}')">` : ''}
+                        <div>
+                            <div class="font-bold text-slate-100">${escapeHtml(r.name)}</div>
+                            ${r.note ? `<div class="text-slate-400 text-[11px] italic mt-0.5">${escapeHtml(r.note)}</div>` : ''}
+                        </div>
+                    </div>
+                    <button type="button" onclick="deleteReminder(${i})" class="text-slate-500 hover:text-rose-400 cursor-pointer p-1"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addCardReminder(e) {
+            e.preventDefault();
+            const nameEl = document.getElementById('reminder-card-name');
+            const imgEl = document.getElementById('reminder-card-img');
+            const noteEl = document.getElementById('reminder-note');
+
+            if (!nameEl.value.trim()) return;
+
+            const reminders = getReminders();
+            reminders.unshift({
+                name: nameEl.value.trim(),
+                imageUrl: imgEl.value || '',
+                note: noteEl.value.trim()
+            });
+
+            localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(reminders));
+            nameEl.value = '';
+            imgEl.value = '';
+            noteEl.value = '';
+            renderRemindersList();
+        }
+
+        function deleteReminder(index) {
+            const reminders = getReminders();
+            reminders.splice(index, 1);
+            localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(reminders));
+            renderRemindersList();
+        }
+
+        function openSingleImageTheater(name, imageUrl) {
+            currentTheaterList = [{
+                name: name,
+                commander: 'Card Reminder',
+                imageUrl: imageUrl,
+                category: 'Cards to Remember',
+                icon: 'fa-bookmark'
+            }];
+            currentTheaterIndex = 0;
+            updateTheaterDisplay();
+            document.getElementById('theater-modal').classList.remove('hidden');
+            document.getElementById('theater-modal').classList.add('flex');
+        }
+
+        // Opponents Form Row Handler
         function addOpponentField(data = {}) {
             const list = document.getElementById('opponents-list');
             const div = document.createElement('div');
-            div.className = 'bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 relative opponent-row';
+            div.className = 'bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-3 relative opponent-row';
+            
+            const concerningTagsHtml = (data.concerning_cards || []).map(c => `
+                <span class="bg-rose-950/60 text-rose-200 border border-rose-900/60 text-[11px] px-2 py-0.5 rounded flex items-center gap-1">
+                    ${escapeHtml(c.name)}
+                    <button type="button" onclick="this.parentElement.remove()" class="hover:text-rose-400 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                    <input type="hidden" class="opp-concerning-data" value="${escapeHtml(JSON.stringify(c))}">
+                </span>
+            `).join('');
+
             div.innerHTML = `
                 <div class="flex justify-between items-center">
                     <span class="text-xs font-semibold text-slate-400">Opponent Details</span>
@@ -649,18 +908,32 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <input type="text" placeholder="Opponent Name" value="${escapeHtml(data.name || '')}" class="opp-name bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500">
                     <div class="relative">
-                        <input type="text" placeholder="Commander / Deck Archetype" value="${escapeHtml(data.commander || '')}" autocomplete="off" class="opp-commander w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500" oninput="handleCommanderInput(this)" onfocus="handleCommanderInput(this)">
+                        <input type="text" placeholder="Commander / Deck Archetype" value="${escapeHtml(data.commander || '')}" autocomplete="off" class="opp-commander w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500" oninput="handleCardSearchInput(this, 'commander')" onfocus="handleCardSearchInput(this, 'commander')">
                         <input type="hidden" class="opp-card-img" value="${escapeHtml(data.cardImageUrl || '')}">
                         <div class="autocomplete-dropdown hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto"></div>
                     </div>
                 </div>
+                <input type="url" placeholder="Add opponent deck (Shared online equivalents, non-upgraded official pre-cons, etc.)" value="${escapeHtml(data.deckUrl || '')}" class="opp-deck-url w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500">
                 <input type="text" placeholder="Playstyle description (e.g., Aggressive token swarm, Stax control, Combo finisher)..." value="${escapeHtml(data.playstyle || '')}" class="opp-playstyle w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500">
+                
+                <!-- Cards that concerned me -->
+                <div>
+                    <label class="block text-[11px] font-semibold text-rose-400 uppercase mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Cards that Concerned Me (Scryfall Search)</label>
+                    <div class="relative">
+                        <input type="text" placeholder="Search card..." autocomplete="off" class="opp-concerning-input w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-200 outline-none focus:border-amber-500" oninput="handleCardSearchInput(this, 'concerning')" onfocus="handleCardSearchInput(this, 'concerning')">
+                        <div class="autocomplete-dropdown hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 max-h-56 overflow-y-auto"></div>
+                    </div>
+                    <div class="opp-concerning-tags flex flex-wrap gap-1.5 mt-1.5">
+                        ${concerningTagsHtml}
+                    </div>
+                </div>
             `;
             list.appendChild(div);
         }
 
+        // Generic Scryfall Autocomplete Handler
         let searchTimeout = null;
-        function handleCommanderInput(inputEl) {
+        function handleCardSearchInput(inputEl, targetType) {
             const query = inputEl.value.trim();
             const dropdown = inputEl.parentElement.querySelector('.autocomplete-dropdown');
             
@@ -685,7 +958,7 @@
                         return;
                     }
 
-                    const cards = data.data.slice(0, 8); // limit to 8 suggestions
+                    const cards = data.data.slice(0, 8);
                     dropdown.innerHTML = cards.map(card => {
                         const imgUrl = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || '';
                         const setName = card.set_name || card.set.toUpperCase();
@@ -694,7 +967,7 @@
                         const setIconUrl = `https://svgs.scryfall.io/sets/${card.set}.svg`;
 
                         return `
-                            <div class="autocomplete-item flex items-center gap-2.5 p-2 hover:bg-slate-800 cursor-pointer border-b border-slate-800/60 last:border-0 text-xs transition" data-card-name="${escapeHtml(card.name)}" data-card-img="${escapeHtml(imgUrl)}">
+                            <div class="autocomplete-item flex items-center gap-2.5 p-2 hover:bg-slate-800 cursor-pointer border-b border-slate-800/60 last:border-0 text-xs transition" data-card-name="${escapeHtml(card.name)}" data-card-img="${escapeHtml(imgUrl)}" data-target-type="${targetType}">
                                 <img src="${setIconUrl}" alt="${setCode}" class="w-4 h-4 object-contain shrink-0 filter invert opacity-80" onerror="this.style.display='none'">
                                 <div class="flex-1 min-w-0 pointer-events-none">
                                     <div class="font-bold text-slate-200 truncate">${escapeHtml(card.name)}</div>
@@ -710,18 +983,45 @@
             }, 300);
         }
 
-        function selectCommanderSuggestion(el, cardName, imgUrl) {
+        function selectCardSuggestion(el, cardName, imgUrl, targetType) {
             const container = el.closest('div.relative');
             if (!container) return;
-            const input = container.querySelector('.opp-commander');
-            const hiddenImg = container.querySelector('.opp-card-img');
-            const dropdown = container.querySelector('.autocomplete-dropdown');
 
-            if (input) input.value = cardName;
-            if (hiddenImg) hiddenImg.value = imgUrl;
+            const dropdown = container.querySelector('.autocomplete-dropdown');
             if (dropdown) {
                 dropdown.classList.add('hidden');
                 dropdown.innerHTML = '';
+            }
+
+            if (targetType === 'commander') {
+                const input = container.querySelector('.opp-commander');
+                const hiddenImg = container.parentElement.querySelector('.opp-card-img');
+                if (input) input.value = cardName;
+                if (hiddenImg) hiddenImg.value = imgUrl;
+            } else if (targetType === 'synergy') {
+                const input = document.getElementById('synergy-card-input');
+                if (input) input.value = '';
+                tempSynergyCards.push({ name: cardName, imageUrl: imgUrl });
+                renderSynergyTags();
+            } else if (targetType === 'concerning') {
+                const input = container.querySelector('.opp-concerning-input');
+                if (input) input.value = '';
+                const tagsContainer = container.parentElement.querySelector('.opp-concerning-tags');
+                if (tagsContainer) {
+                    const tagSpan = document.createElement('span');
+                    tagSpan.className = 'bg-rose-950/60 text-rose-200 border border-rose-900/60 text-[11px] px-2 py-0.5 rounded flex items-center gap-1';
+                    tagSpan.innerHTML = `
+                        ${escapeHtml(cardName)}
+                        <button type="button" onclick="this.parentElement.remove()" class="hover:text-rose-400 cursor-pointer"><i class="fa-solid fa-xmark"></i></button>
+                        <input type="hidden" class="opp-concerning-data" value="${escapeHtml(JSON.stringify({ name: cardName, imageUrl: imgUrl }))}">
+                    `;
+                    tagsContainer.appendChild(tagSpan);
+                }
+            } else if (targetType === 'reminder') {
+                const input = document.getElementById('reminder-card-name');
+                const hiddenImg = document.getElementById('reminder-card-img');
+                if (input) input.value = cardName;
+                if (hiddenImg) hiddenImg.value = imgUrl;
             }
         }
 
@@ -744,11 +1044,18 @@
                     }
                 }
 
+                const concerningCards = [];
+                row.querySelectorAll('.opp-concerning-data').forEach(cInput => {
+                    try { concerningCards.push(JSON.parse(cInput.value)); } catch(e){}
+                });
+
                 opponents.push({
                     name: row.querySelector('.opp-name').value || 'Opponent',
                     commander: cmdName,
+                    deckUrl: row.querySelector('.opp-deck-url').value || '',
                     playstyle: row.querySelector('.opp-playstyle').value || '',
-                    cardImageUrl: cardImg
+                    cardImageUrl: cardImg,
+                    concerning_cards: concerningCards
                 });
             });
 
@@ -760,6 +1067,7 @@
                 placement: document.getElementById('game-placement').value,
                 moxfield_url: document.getElementById('game-moxfield').value,
                 improvement_notes: document.getElementById('game-notes').value,
+                synergy_cards: tempSynergyCards,
                 opponents: opponents
             };
 
@@ -799,6 +1107,7 @@
             const data = {
                 formats: getFormats(),
                 games: getGames(),
+                reminders: getReminders(),
                 exportDate: now.toISOString()
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'json' });
@@ -820,6 +1129,7 @@
                     const parsed = JSON.parse(e.target.result);
                     if (parsed.games && Array.isArray(parsed.games)) saveGames(parsed.games);
                     if (parsed.formats && Array.isArray(parsed.formats)) localStorage.setItem(STORAGE_KEY_FORMATS, JSON.stringify(parsed.formats));
+                    if (parsed.reminders && Array.isArray(parsed.reminders)) localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(parsed.reminders));
                     initFormats();
                     loadGames();
                     alert('Backup imported successfully!');
